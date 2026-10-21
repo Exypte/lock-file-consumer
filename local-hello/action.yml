@@ -1,0 +1,7 @@
+name: Local hello
+description: Same-repo composite
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo "Hello from local action"
