@@ -16,7 +16,7 @@ dependencies:
         ref: 'v3.0.0'
         commit: 'sha1-6133a07d2663d9bfa11411a3fb969b4a711d6363'
         owner_id: 38421281
-        repo_id: 1428395650
+        repo_id: 1428395651
         uses:
             - 'super-linter/super-linter@v6.5.0'
     'super-linter/super-linter@v6.5.0':
