@@ -2,10 +2,7 @@
 # Do not edit by hand; run `gh actions-lock` to update.
 # Docs: https://gh.io/actions-lockfile
 version: 'v0.0.3'
-workflows:
-    '.github/workflows/ci.yml':
-        - 'actions/checkout@v7.0.1'
-        - 'exypte/lock-file-action@v3.0.0'
+workflows: {}
 dependencies:
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'
