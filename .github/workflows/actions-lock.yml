@@ -1,0 +1,29 @@
+# Verifies that .github/workflows/actions.lock is up to date and trustworthy.
+# For more information see: https://github.com/github/gh-actions-lock
+
+name: Actions lockfile
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install gh-actions-lock
+        run: gh extension install github/gh-actions-lock --pin v0.2.0
+
+      - name: Verify lockfile
+        run: gh actions-lock --verify
