@@ -19,8 +19,3 @@ dependencies:
         repo_id: 1428395650
         uses:
             - 'super-linter/super-linter@v6.5.0'
-    'super-linter/super-linter@v6.5.0':
-        ref: 'v6.5.0'
-        commit: 'sha1-56576d491db07c7236b445ab09991ca49d12b0c6'
-        owner_id: 74564708
-        repo_id: 216581567
