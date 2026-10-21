@@ -11,13 +11,5 @@ permissions:
   contents: read
 
 jobs:
-  action:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
-      - uses: Exypte/lock-file-action@v3.0.0
-
   workflow:
     uses: Exypte/lock-file-workflow/.github/workflows/hello.yml@v3.0.0
