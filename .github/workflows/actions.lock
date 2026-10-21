@@ -24,3 +24,4 @@ dependencies:
         commit: 'sha1-56576d491db07c7236b445ab09991ca49d12b0c6'
         owner_id: 74564708
         repo_id: 216581567
+this: is: [not valid yaml
