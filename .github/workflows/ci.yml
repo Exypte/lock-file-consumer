@@ -12,4 +12,4 @@ permissions:
 
 jobs:
   workflow:
-    uses: Exypte/lock-file-workflow/.github/workflows/hello.yml@v3.0.0
+    uses: Exypte/lock-file-workflow/.github/workflows/hello.yml@v3.0.1
