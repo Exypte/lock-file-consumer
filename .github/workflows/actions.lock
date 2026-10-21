@@ -6,6 +6,7 @@ workflows:
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
         - 'exypte/lock-file-action@v3.0.0'
+    '.github/workflows/shell.yml': []
 dependencies:
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'
