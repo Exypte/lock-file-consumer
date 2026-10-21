@@ -11,13 +11,15 @@ permissions:
   contents: read
 
 jobs:
-  action:
+  docker-step:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: docker://alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
         with:
-          persist-credentials: false
-      - uses: Exypte/lock-file-action@v3.0.0
+          args: echo "docker:// step"
 
-  workflow:
-    uses: Exypte/lock-file-workflow/.github/workflows/hello.yml@v3.0.0
+  job-container:
+    runs-on: ubuntu-latest
+    container: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    steps:
+      - run: echo "inside job container"; cat /etc/os-release | head -2
