@@ -5,9 +5,16 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/ci.yml':
         - 'actions/checkout@939969cd8033f8c104ef0f038ea698e8fbfaee6d'
+    '.github/workflows/verify-lockfile.yml':
+        - 'actions/checkout@v7.0.1'
 dependencies:
     'actions/checkout@939969cd8033f8c104ef0f038ea698e8fbfaee6d':
         ref: 'v7.0.1'
         commit: 'sha1-939969cd8033f8c104ef0f038ea698e8fbfaee6d'
+        owner_id: 44036562
+        repo_id: 197814629
+    'actions/checkout@v7.0.1':
+        ref: 'v7.0.1'
+        commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
         owner_id: 44036562
         repo_id: 197814629
