@@ -2,7 +2,9 @@
 # Do not edit by hand; run `gh actions-lock` to update.
 # Docs: https://gh.io/actions-lockfile
 version: 'v0.0.3'
-workflows: {}
+workflows:
+    '.github/workflows/verify-lockfile.yml':
+        - 'actions/checkout@v7.0.1'
 dependencies:
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'
