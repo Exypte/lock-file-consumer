@@ -11,7 +11,7 @@ What the Go code does in [`github/actions-lockfile`](https://github.com/github/a
 | Does | Schema v0.0.1 → v0.0.3; parse, validate, migrate old versions; grammar for pins, `uses:`, semver, action.yml | Resolves every action (and nested composite action) to a commit via the GitHub API; checks pins the way the runner does at job start; rewrites workflows and saves the lockfile, all or nothing |
 | Doesn't | Call the network or write files | Define the format (it imports the library as `parserlock`) |
 
-Contents: [Architecture](#architecture) · [actions-lockfile](#githubactions-lockfile) · [gh-actions-lock](#githubgh-actions-lock) · [How they connect](#how-they-connect) · [Sources](#sources)
+Contents: [Architecture](#architecture) · [actions-lockfile](#githubactions-lockfile) · [gh-actions-lock](#githubgh-actions-lock) · [What --verify does](#what---verify-does) · [How they connect](#how-they-connect) · [Sources](#sources)
 
 ## Architecture
 
@@ -254,6 +254,70 @@ Defined in `internal/pipeline/checks/category.go`. The security checks that come
 - **Environment variables.** `GH_ACTIONS_LOCK_WORKFLOWS_DIR`, `GH_ACTIONS_LOCK_REPO_ROOT`,
   `GH_ACTIONS_LOCK_DEPENDABOT_PROXY`, `GH_ACTIONS_LOCK_CONFIG`, `GH_ACTIONS_LOCK_INSECURE`,
   `GH_ACTIONS_LOCK_STALL_HINT_MS`; `CI` and `GITHUB_ACTIONS` pick the retry policy.
+
+### What `--verify` does
+
+`--verify` is `--no-fix` (read-only) with one extra warning. It runs the full online check, including the same pin
+check the Actions runner does at job start, and never writes anything. Traced from the source on `main`.
+
+```mermaid
+flowchart TD
+  A["--verify<br/>applyVerifyFlags: noFix = true"] --> B["Setup<br/>load lockfile before auth · build API client<br/>stale workflows listed, not pruned"]
+  B --> C["Seed resolver from lockfile<br/>(unless --relock / --accept-moved)"]
+  C --> D["pipeline.Run<br/>Verify: true · ReadOnly: true"]
+  D --> E["Resolve only refs missing from the lockfile"]
+  E --> F["Diagnose"]
+  F --> G["Parity: CheckPins over every locked pin<br/>+ Compare for refs that moved"]
+  G --> H["Restore deferred findings · stale-workflow info<br/>own-SHA entries as errors · --no-onboard gate"]
+  H --> I{"Blocking findings?"}
+  I -- no --> J["exit 0<br/>All N workflows valid"]
+  I -- yes --> K["exit 1<br/>Re-run without --verify to apply fixes"]
+  classDef step fill:#e5eefb,stroke:#1f5fbf,color:#1b2230
+  classDef gate fill:#fbf0df,stroke:#a65f00,color:#1b2230
+  classDef out fill:#eef1f5,stroke:#5a6476,color:#1b2230
+  class A,B,C,D,E,F,G,H step
+  class I gate
+  class J,K out
+```
+
+1. **Flag expansion** (`cmd/gh-actions-lock/verify.go:30`): `if opts.verify { opts.noFix = true }`. The only rejected
+   combination is `--verify` with `--verify-local` (`run.go:117`). `--relock` and `--accept-moved` are allowed;
+   `--accept-moved` is then forced off (`AcceptMoved: opts.acceptMoved && !opts.noFix`, `run.go:322`), but either flag
+   still makes the run re-resolve everything live instead of trusting the lockfile.
+2. **Setup** (`runCheck` → `newRun`). A run log is always written (`--verify-local` writes none). Workflows are found,
+   then `actions.lock` is loaded before authenticating, so a corrupt or too-new lockfile exits 2. The API client is
+   built, so `--verify` needs authentication. On a full scan, entries for deleted workflows are listed but not removed
+   (`!opts.noFix` guard, `run.go:220`). Hosts are checked and the resolver is filled from the lockfile.
+3. **Skipped because nothing is written:** `--migrate-local-actions` (`run.go:271`), cooldown config and the tag lister
+   (`run.go:309`). So no `fresh-tag` findings and no narrowing.
+4. **Diagnosis** (`pipeline.Run` with `Verify: true, ReadOnly: true`). Parse every `uses:`. Refs missing from the
+   lockfile still go to the GitHub API so they can be reported (for example `not-pinned`); fully covered workflows are
+   skipped. Then the structural, misleading-SHA and forged-ref checks, and parity: one batched `CheckPins` call over every
+   locked pin (same repo ID, commit exists, ref still contains the commit), with a Compare call for each ref that moved.
+5. **The only check unique to `--verify`** (`internal/pipeline/parity.go:272`):
+
+   | Situation | `--no-fix` | `--verify` |
+   |---|---|---|
+   | Exact tag (`v1.2.3`) moved ahead of the locked commit | `tag-commit-mismatch`, error | same error |
+   | Full-SHA `uses:` whose recorded tag moved ahead, commit still in its history | nothing | **`ref-moved` warning** (doesn't block) |
+
+6. **After diagnosis** (`run.go:353` onward), in order:
+   1. `blockLocalActions`: a `./` local action that uses remote actions becomes blocking.
+   2. `RestoreDeferred`: findings a fix run would have excused, because the write would repair them, become blocking again.
+   3. Deleted workflows are reported as `stale-workflow` info findings instead of being pruned.
+   4. `appendOwnSHAEntryFindings`: a lockfile entry whose ref is its own commit SHA is an error (the Actions backend
+      rejects it).
+   5. `--no-onboard`, if set, turns new items into `onboarding-required` info findings.
+   6. Print (terminal or `--json`) plus SSO hints, then exit **0** ("All N workflows valid") or **1** ("Re-run without
+      --verify to apply fixes." when a normal run could fix them).
+
+It never reaches Plan, Audit or Commit, so nothing is written to disk.
+
+> **Out-of-date comment.** `RunOptions.Verify` (`internal/pipeline/run.go:28`) says `--verify` adds the history check
+> on refs that moved. In the code that Compare check runs in every mode; `--verify` adds only the `ref-moved` warning.
+
+> **Compared with GitHub's runtime** (scenarios in this repo): an exact tag locked to an older commit in its history
+> (labs 10 and 20) fails `--verify` with `tag-commit-mismatch`, yet GitHub still runs it.
 
 ## How they connect
 
