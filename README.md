@@ -8,10 +8,20 @@ Many scenarios reproduce the experiments in BoostSecurity's
 [Pinning the unpinnable: GitHub Actions lockfiles](https://labs.boostsecurity.io/articles/pinning-the-unpinnable-github-actions-lockfiles/);
 the others are new.
 
-> **Only GitHub's own enforcement is tested.** This repo deliberately has **no** `gh actions-lock --verify`
-> workflow (`actions-lock.yml` was removed from every branch). A scenario's result is what GitHub does with
-> the run: `startup_failure`, a failure in *Set up job*, or a locked, successful run. The CLI output
-> appears in each PR body for reference only.
+> **Two results per scenario.**
+> - **GitHub result** is what GitHub's own lockfile enforcement does with the scenario's `ci.yml` run:
+>   `startup_failure`, a failure in *Set up job*, or a locked, successful run.
+> - **`--verify` result** comes from `verify-lockfile.yml` on the same branch. It's an exact copy of
+>   [github/gh-actions-lock's workflow](https://github.com/github/gh-actions-lock/blob/main/.github/workflows/verify-lockfile.yml),
+>   which runs `gh actions-lock --verify` (v0.2.0).
+>
+> GitHub enforces the branch's lockfile on `verify-lockfile.yml` too. Its entry
+> (`verify-lockfile.yml` → `actions/checkout@v7.0.1`) was **added to each branch's `actions.lock` by hand**,
+> never with `gh actions-lock`, so the tampering under test is left as it was. Where the lockfile is
+> missing or malformed, GitHub blocks `verify-lockfile.yml` as well (⛔).
+>
+> Legend for `--verify`: ✅ exit 0 · ❌ exit 1 (blocking findings) · 💥 exit 2 (the tool failed) ·
+> ⛔ GitHub never started the workflow. Each cell links to its run.
 
 ## Repositories
 
@@ -25,11 +35,11 @@ the others are new.
 
 ## First scenarios (PRs #1–#3)
 
-| PR | Branch | Setup | GitHub result |
-|---|---|---|---|
-| [#1](https://github.com/Exypte/lock-file-consumer/pull/1) | `lockfile-action-only` | Uses only `lock-file-action@v3.0.0`, relocked | ✅ runs locked (the transitive `super-linter@v6.5.0` is pinned too) |
-| [#2](https://github.com/Exypte/lock-file-consumer/pull/2) | `lockfile-workflow-only` | Calls only `lock-file-workflow/…/hello.yml` | `@v3.0.0`: ❌ `startup_failure` "missing a lockfile: …hello.yml@v3.0.0" → `@v3.0.1`: ✅ runs |
-| [#3](https://github.com/Exypte/lock-file-consumer/pull/3) | `no-lockfile` | Uses both, `actions.lock` deleted | ❌ `startup_failure` "Workflow must use a lockfile" |
+| PR | Branch | Setup | GitHub result | `--verify` result |
+|---|---|---|---|---|
+| [#1](https://github.com/Exypte/lock-file-consumer/pull/1) | `lockfile-action-only` | Uses only `lock-file-action@v3.0.0`, relocked | ✅ runs locked (the transitive `super-linter@v6.5.0` is pinned too) | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784812509) |
+| [#2](https://github.com/Exypte/lock-file-consumer/pull/2) | `lockfile-workflow-only` | Calls only `lock-file-workflow/…/hello.yml` | `@v3.0.0`: ❌ `startup_failure` "missing a lockfile: …hello.yml@v3.0.0" → `@v3.0.1`: ✅ runs | [✅ valid (the callee's own lockfile isn't checked)](https://github.com/Exypte/lock-file-consumer/actions/runs/39786756052) |
+| [#3](https://github.com/Exypte/lock-file-consumer/pull/3) | `no-lockfile` | Uses both, `actions.lock` deleted | ❌ `startup_failure` "Workflow must use a lockfile" | [⛔ blocked by GitHub (`startup_failure`)](https://github.com/Exypte/lock-file-consumer/actions/runs/39786759564) |
 
 **About reusable workflows:** the lockfile format does not list reusable workflows yet
 ([gh-actions-lock#194](https://github.com/github/gh-actions-lock/issues/194#issuecomment-6293973418)), so
@@ -47,37 +57,37 @@ Each PR has a **Result** comment with the run link, the evidence from the log, a
 
 Legend: ✅ behaved as expected · ⚠️ GitHub did **not** stop something you might expect it to stop.
 
-| Lab | PR | Scenario | Article § | GitHub result |
-|---|---|---|---|---|
-| 01 | [#4](https://github.com/Exypte/lock-file-consumer/pull/4) | Full-SHA `uses:` with a lying `# v3.0.0` comment | Poutine migration | ✅ the CLI rewrote it to `@v2.0.0` (comment dropped); prints V2 |
-| 02 | [#5](https://github.com/Exypte/lock-file-consumer/pull/5) | Two versions of one action in one lockfile | Multiple versions | ✅ `@v1.0.0` and `@v3.0.0` coexist, both run |
-| 03 | [#6](https://github.com/Exypte/lock-file-consumer/pull/6) | Malformed lockfile YAML | Fork matrix | ✅ `startup_failure`, reported as *missing a lockfile* |
-| 04 | [#7](https://github.com/Exypte/lock-file-consumer/pull/7) | `ci.yml` entry removed from `workflows:` | Fork matrix | ✅ `startup_failure` "missing a lockfile" |
-| 05 | [#8](https://github.com/Exypte/lock-file-consumer/pull/8) | New workflow added without relocking | Fork matrix | ✅ new workflow stopped, `ci.yml` runs |
-| 06 | [#9](https://github.com/Exypte/lock-file-consumer/pull/9) | Shell-only workflow, not onboarded | Shell-only workflow | ✅ stopped even with no `uses:` |
-| 07 | [#10](https://github.com/Exypte/lock-file-consumer/pull/10) | Shell-only workflow onboarded with `[]` | Shell-only workflow | ✅ runs |
-| 08 | [#11](https://github.com/Exypte/lock-file-consumer/pull/11) | Action ref changed, lockfile not updated | Fork matrix | ✅ `startup_failure` "Invalid lockfile" |
-| 09 | [#12](https://github.com/Exypte/lock-file-consumer/pull/12) | Action ref changed with matching pin | Fork matrix | ✅ runs locked, prints V2 |
-| 10 | [#13](https://github.com/Exypte/lock-file-consumer/pull/13) | Exact tag `v3.0.0` locked to the v2 commit | new | ⚠️ **runs the v2 code as `@v3.0.0`**; only `--verify` detects it |
-| 11 | [#14](https://github.com/Exypte/lock-file-consumer/pull/14) | `@main` locked to an older commit in main's history | Lock-only change | ⚠️ silent rollback, prints V1 (CLI doesn't detect it either) |
-| 12 | [#15](https://github.com/Exypte/lock-file-consumer/pull/15) | `@main` = unreleased commit | new | ✅ runs `A wrong hello world` |
-| 13 | [#16](https://github.com/Exypte/lock-file-consumer/pull/16) | Commit not in the claimed tag's history | new | ✅ fails in *Set up job*: "does not match ref `v1.0.0`" |
-| 14 | [#17](https://github.com/Exypte/lock-file-consumer/pull/17) | Lockfile `ref:` set to a SHA | new | ✅ `startup_failure` "Invalid lockfile … line 16" |
-| 15 | [#18](https://github.com/Exypte/lock-file-consumer/pull/18) | Tampered `repo_id` | Repository identity | ✅ fails in *Set up job*: "repository identity has changed" |
-| 16 | [#19](https://github.com/Exypte/lock-file-consumer/pull/19) | Tampered `owner_id` | Repository identity | ✅ runs (`owner_id` isn't enforced) |
-| 17 | [#20](https://github.com/Exypte/lock-file-consumer/pull/20) | Transitive dependency entry removed | new | ✅ `startup_failure` "Invalid lockfile" |
-| 18 | [#21](https://github.com/Exypte/lock-file-consumer/pull/21) | Nested `helper@moving` advanced upstream | Nested moving ref | ✅ re-run still prints `Helper V1` |
-| 19 | [#22](https://github.com/Exypte/lock-file-consumer/pull/22) | Nested `helper@to-delete` deleted upstream | Branch deleted | ✅ re-run fails: "does not match ref `to-delete`" |
-| 20 | [#23](https://github.com/Exypte/lock-file-consumer/pull/23) | Exact tag `v0.1.0` force-moved upstream | new | ⚠️ re-run keeps the old commit; GitHub never reports the moved tag (`--verify` does) |
-| 21 | [#24](https://github.com/Exypte/lock-file-consumer/pull/24) | `$/helper` inside a remote composite vs the caller's own `helper/` | `$/` prefix | ✅ the composite's own helper runs |
-| 22 | [#25](https://github.com/Exypte/lock-file-consumer/pull/25) | Local `./` action, default relock | `$/` prefix | ✅ rewritten to `$/local-hello`, runs |
-| 23 | [#26](https://github.com/Exypte/lock-file-consumer/pull/26) | Local `./` action, `--no-migrate-local-actions` (stale lock) | new | ⚠️ **runs**, even though the CLI refuses the workflow |
-| 24 | [#27](https://github.com/Exypte/lock-file-consumer/pull/27) | Fork-only imposter SHA, CLI-generated lock | Imposter commit (a) | ✅ CLI: "does not exist"; `startup_failure` |
-| 25 | [#28](https://github.com/Exypte/lock-file-consumer/pull/28) | Fork-only imposter SHA, hand-written lock with `ref: v7.0.1` | Imposter commit (b) | ✅ fails "unable to find version"; the bypass is fixed |
-| 26 | [#29](https://github.com/Exypte/lock-file-consumer/pull/29) | `docker://alpine:3.20` step + job `container:` | Docker images | ✅ runs; the CLI warns about the step only, not the job container |
-| 27 | [#30](https://github.com/Exypte/lock-file-consumer/pull/30) | Same images pinned `@sha256:` | Docker images | ✅ runs, no warning |
-| 28 | [#31](https://github.com/Exypte/lock-file-consumer/pull/31) | Reusable workflow whose tag has no lockfile | Reusable workflows | ✅ `startup_failure` "missing a lockfile: …hello.yml@v3.0.0" |
-| 29 | [#32](https://github.com/Exypte/lock-file-consumer/pull/32) | Same-repo reusable workflow via `$/` | new | ✅ runs |
+| Lab | PR | Scenario | Article § | GitHub result | `--verify` result |
+|---|---|---|---|---|---|
+| 01 | [#4](https://github.com/Exypte/lock-file-consumer/pull/4) | Full-SHA `uses:` with a lying `# v3.0.0` comment | Poutine migration | ✅ the CLI rewrote it to `@v2.0.0` (comment dropped); prints V2 | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784829123) |
+| 02 | [#5](https://github.com/Exypte/lock-file-consumer/pull/5) | Two versions of one action in one lockfile | Multiple versions | ✅ `@v1.0.0` and `@v3.0.0` coexist, both run | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784784801) |
+| 03 | [#6](https://github.com/Exypte/lock-file-consumer/pull/6) | Malformed lockfile YAML | Fork matrix | ✅ `startup_failure`, reported as *missing a lockfile* | [⛔ blocked by GitHub (`startup_failure`)](https://github.com/Exypte/lock-file-consumer/actions/runs/39784805625) |
+| 04 | [#7](https://github.com/Exypte/lock-file-consumer/pull/7) | `ci.yml` entry removed from `workflows:` | Fork matrix | ✅ `startup_failure` "missing a lockfile" | [❌ *Not pinned* ×2 in `ci.yml`](https://github.com/Exypte/lock-file-consumer/actions/runs/39784861552) |
+| 05 | [#8](https://github.com/Exypte/lock-file-consumer/pull/8) | New workflow added without relocking | Fork matrix | ✅ new workflow stopped, `ci.yml` runs | [❌ *Not pinned* `lock-file-action@v2.0.0` in `other.yml`](https://github.com/Exypte/lock-file-consumer/actions/runs/39784875910) |
+| 06 | [#9](https://github.com/Exypte/lock-file-consumer/pull/9) | Shell-only workflow, not onboarded | Shell-only workflow | ✅ stopped even with no `uses:` | [❌ *Not pinned*: `shell.yml` has no lockfile entry](https://github.com/Exypte/lock-file-consumer/actions/runs/39784777058) |
+| 07 | [#10](https://github.com/Exypte/lock-file-consumer/pull/10) | Shell-only workflow onboarded with `[]` | Shell-only workflow | ✅ runs | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784854952) |
+| 08 | [#11](https://github.com/Exypte/lock-file-consumer/pull/11) | Action ref changed, lockfile not updated | Fork matrix | ✅ `startup_failure` "Invalid lockfile" | [❌ *Ref changed* `v2.0.0` vs locked `v3.0.0` + unused entry](https://github.com/Exypte/lock-file-consumer/actions/runs/39784786680) |
+| 09 | [#12](https://github.com/Exypte/lock-file-consumer/pull/12) | Action ref changed with matching pin | Fork matrix | ✅ runs locked, prints V2 | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784797175) |
+| 10 | [#13](https://github.com/Exypte/lock-file-consumer/pull/13) | Exact tag `v3.0.0` locked to the v2 commit | new | ⚠️ **runs the v2 code as `@v3.0.0`**; only `--verify` detects it | [❌ *Pinned commit not in upstream history*: tag `v3.0.0` → `6133a07`, lock `ed8c589`](https://github.com/Exypte/lock-file-consumer/actions/runs/39784782738) |
+| 11 | [#14](https://github.com/Exypte/lock-file-consumer/pull/14) | `@main` locked to an older commit in main's history | Lock-only change | ⚠️ silent rollback, prints V1 (CLI doesn't detect it either) | [✅ valid (rollback not detected)](https://github.com/Exypte/lock-file-consumer/actions/runs/39784893956) |
+| 12 | [#15](https://github.com/Exypte/lock-file-consumer/pull/15) | `@main` = unreleased commit | new | ✅ runs `A wrong hello world` | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784855470) |
+| 13 | [#16](https://github.com/Exypte/lock-file-consumer/pull/16) | Commit not in the claimed tag's history | new | ✅ fails in *Set up job*: "does not match ref `v1.0.0`" | [❌ *Pinned commit not in upstream history*: tag `v1.0.0`](https://github.com/Exypte/lock-file-consumer/actions/runs/39784784772) |
+| 14 | [#17](https://github.com/Exypte/lock-file-consumer/pull/17) | Lockfile `ref:` set to a SHA | new | ✅ `startup_failure` "Invalid lockfile … line 16" | [💥 exit 2: lockfile unreadable, body `ref` ≠ pin key ref (line 18)](https://github.com/Exypte/lock-file-consumer/actions/runs/39784772524) |
+| 15 | [#18](https://github.com/Exypte/lock-file-consumer/pull/18) | Tampered `repo_id` | Repository identity | ✅ fails in *Set up job*: "repository identity has changed" | [❌ *Repository replaced*: repo ID changed](https://github.com/Exypte/lock-file-consumer/actions/runs/39784815746) |
+| 16 | [#19](https://github.com/Exypte/lock-file-consumer/pull/19) | Tampered `owner_id` | Repository identity | ✅ runs (`owner_id` isn't enforced) | [✅ valid (`owner_id` not checked)](https://github.com/Exypte/lock-file-consumer/actions/runs/39784853166) |
+| 17 | [#20](https://github.com/Exypte/lock-file-consumer/pull/20) | Transitive dependency entry removed | new | ✅ `startup_failure` "Invalid lockfile" | [✅ valid ⚠️ missing transitive entry not detected](https://github.com/Exypte/lock-file-consumer/actions/runs/39784791209) |
+| 18 | [#21](https://github.com/Exypte/lock-file-consumer/pull/21) | Nested `helper@moving` advanced upstream | Nested moving ref | ✅ re-run still prints `Helper V1` | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784804360) |
+| 19 | [#22](https://github.com/Exypte/lock-file-consumer/pull/22) | Nested `helper@to-delete` deleted upstream | Branch deleted | ✅ re-run fails: "does not match ref `to-delete`" | [❌ *Ref no longer exists*: `lock-file-helper@to-delete`](https://github.com/Exypte/lock-file-consumer/actions/runs/39784790488) |
+| 20 | [#23](https://github.com/Exypte/lock-file-consumer/pull/23) | Exact tag `v0.1.0` force-moved upstream | new | ⚠️ re-run keeps the old commit; GitHub never reports the moved tag (`--verify` does) | [❌ *Pinned commit not in upstream history*: tag `v0.1.0` moved](https://github.com/Exypte/lock-file-consumer/actions/runs/39784810731) |
+| 21 | [#24](https://github.com/Exypte/lock-file-consumer/pull/24) | `$/helper` inside a remote composite vs the caller's own `helper/` | `$/` prefix | ✅ the composite's own helper runs | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784819880) |
+| 22 | [#25](https://github.com/Exypte/lock-file-consumer/pull/25) | Local `./` action, default relock | `$/` prefix | ✅ rewritten to `$/local-hello`, runs | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784798986) |
+| 23 | [#26](https://github.com/Exypte/lock-file-consumer/pull/26) | Local `./` action, `--no-migrate-local-actions` (stale lock) | new | ⚠️ **runs**, even though the CLI refuses the workflow | [❌ *local action* not supported](https://github.com/Exypte/lock-file-consumer/actions/runs/39784761396) |
+| 24 | [#27](https://github.com/Exypte/lock-file-consumer/pull/27) | Fork-only imposter SHA, CLI-generated lock | Imposter commit (a) | ✅ CLI: "does not exist"; `startup_failure` | [❌ *Not pinned* imposter SHA + 2 unused entries](https://github.com/Exypte/lock-file-consumer/actions/runs/39784818426) |
+| 25 | [#28](https://github.com/Exypte/lock-file-consumer/pull/28) | Fork-only imposter SHA, hand-written lock with `ref: v7.0.1` | Imposter commit (b) | ✅ fails "unable to find version"; the bypass is fixed | [✅ valid ⚠️ only warns "bare SHA without a tag ref"](https://github.com/Exypte/lock-file-consumer/actions/runs/39784850984) |
+| 26 | [#29](https://github.com/Exypte/lock-file-consumer/pull/29) | `docker://alpine:3.20` step + job `container:` | Docker images | ✅ runs; the CLI warns about the step only, not the job container | [✅ valid, warns `docker://alpine:3.20` isn't covered](https://github.com/Exypte/lock-file-consumer/actions/runs/39784861329) |
+| 27 | [#30](https://github.com/Exypte/lock-file-consumer/pull/30) | Same images pinned `@sha256:` | Docker images | ✅ runs, no warning | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784839503) |
+| 28 | [#31](https://github.com/Exypte/lock-file-consumer/pull/31) | Reusable workflow whose tag has no lockfile | Reusable workflows | ✅ `startup_failure` "missing a lockfile: …hello.yml@v3.0.0" | [✅ valid ⚠️ the callee's missing lockfile isn't checked](https://github.com/Exypte/lock-file-consumer/actions/runs/39784856296) |
+| 29 | [#32](https://github.com/Exypte/lock-file-consumer/pull/32) | Same-repo reusable workflow via `$/` | new | ✅ runs | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39784810264) |
 
 ## Key findings
 
@@ -103,6 +113,22 @@ Legend: ✅ behaved as expected · ⚠️ GitHub did **not** stop something you 
    - Coverage and parse problems stop the run before it starts (`startup_failure`, with an annotation on the run page that the REST API doesn't return).
    - Identity and ref checks fail later, in the job's *Set up job* step.
 
+## `--verify` compared with GitHub
+
+These results come from the `verify-lockfile.yml` runs of 2026-10-22, each linked in the tables above.
+
+| | Labs | What happens |
+|---|---|---|
+| **`--verify` is stricter** | 10, 20, 23 | GitHub runs the workflow. `--verify` fails on an exact tag locked to a commit the tag no longer points at (10, 20), and on a `./` local action (23). |
+| **GitHub is stricter** | 17, 25, 28 | `--verify` passes, but GitHub stops the run: a missing transitive dependency entry (17), a hand-written lock that maps `v7.0.1` to the fork-only imposter commit (25; the CLI only warns "pinned to a bare SHA without a tag ref"), and a reusable workflow whose tag ships no lockfile (28). |
+| **Both catch it** | 04, 05, 06, 08, 13, 15, 19, 24 | Missing coverage, ref changed without relocking, a commit outside its ref, a replaced repository, a deleted upstream branch, an imposter SHA in `uses:`. |
+| **Neither catches it** | 11, 16 | A floating branch locked to an older commit (11) and a tampered `owner_id` (16) pass both. |
+| **Different failure** | 14 | GitHub reports *Invalid lockfile*. `--verify` exits **2**, because the lockfile parser rejects it as unreadable ("action body ref … does not match pin key ref"). |
+
+Takeaways:
+- Running `--verify` in CI adds the exact-tag check (labs 10, 20), which is GitHub's main blind spot.
+- `--verify` doesn't replace GitHub's enforcement. Labs 17, 25 and 28 pass `--verify` but are rejected at runtime.
+
 ## Not covered
 
 - PRs opened from forks
@@ -116,7 +142,7 @@ Legend: ✅ behaved as expected · ⚠️ GitHub did **not** stop something you 
 ```sh
 gh extension install github/gh-actions-lock --pin v0.2.0
 gh actions-lock            # pin every workflow and write .github/workflows/actions.lock
-gh actions-lock --verify   # read-only check (what this repo deliberately does NOT run in CI)
+gh actions-lock --verify   # read-only check (run in CI on every scenario PR by verify-lockfile.yml)
 gh actions-lock --relock   # re-resolve every ref to its current upstream commit
 ```
 
