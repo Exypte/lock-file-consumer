@@ -24,6 +24,7 @@ the others are new.
 > ⛔ GitHub never started the workflow · 🆕 result or finding changed since v0.2.0. Each cell links to its run.
 >
 > The lockfiles were generated with v0.2.0 and are left as they are, so `--verify` judges exactly what was tested.
+> The exceptions are labs 01 and 09: they test nothing in the lockfile, so they were relocked with v0.3.0 (`gh actions-lock --relock`).
 
 ## Repositories
 
@@ -61,7 +62,7 @@ Legend: ✅ behaved as expected · ⚠️ GitHub did **not** stop something you 
 
 | Lab | PR | Scenario | Article § | GitHub result | `--verify` result |
 |---|---|---|---|---|---|
-| 01 | [#4](https://github.com/Exypte/lock-file-consumer/pull/4) | Full-SHA `uses:` with a lying `# v3.0.0` comment | Poutine migration | ✅ the CLI rewrote it to `@v2.0.0` (comment dropped); prints V2 | [🆕 ❌ *Incomplete lockfile*: the lock (written by v0.2.0) doesn't record the `lock-file-action@v2.0.0` → `actions/checkout@v7.0.1` edge](https://github.com/Exypte/lock-file-consumer/actions/runs/39921347696) |
+| 01 | [#4](https://github.com/Exypte/lock-file-consumer/pull/4) | Full-SHA `uses:` with a lying `# v3.0.0` comment | Poutine migration | ✅ the CLI rewrote it to `@v2.0.0` (comment dropped); prints V2 | [✅ valid (relocked with v0.3.0)](https://github.com/Exypte/lock-file-consumer/actions/runs/39922496014) |
 | 02 | [#5](https://github.com/Exypte/lock-file-consumer/pull/5) | Two versions of one action in one lockfile | Multiple versions | ✅ `@v1.0.0` and `@v3.0.0` coexist, both run | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39921352505) |
 | 03 | [#6](https://github.com/Exypte/lock-file-consumer/pull/6) | Malformed lockfile YAML | Fork matrix | ✅ `startup_failure`, reported as *missing a lockfile* | [⛔ blocked by GitHub (`startup_failure`)](https://github.com/Exypte/lock-file-consumer/actions/runs/39921359792) |
 | 04 | [#7](https://github.com/Exypte/lock-file-consumer/pull/7) | `ci.yml` entry removed from `workflows:` | Fork matrix | ✅ `startup_failure` "missing a lockfile" | [❌ *Not pinned* ×2 in `ci.yml`](https://github.com/Exypte/lock-file-consumer/actions/runs/39921362609) |
@@ -69,8 +70,8 @@ Legend: ✅ behaved as expected · ⚠️ GitHub did **not** stop something you 
 | 06 | [#9](https://github.com/Exypte/lock-file-consumer/pull/9) | Shell-only workflow, not onboarded | Shell-only workflow | ✅ stopped even with no `uses:` | [❌ *Not pinned*: `shell.yml` has no lockfile entry](https://github.com/Exypte/lock-file-consumer/actions/runs/39921369370) |
 | 07 | [#10](https://github.com/Exypte/lock-file-consumer/pull/10) | Shell-only workflow onboarded with `[]` | Shell-only workflow | ✅ runs | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39921372127) |
 | 08 | [#11](https://github.com/Exypte/lock-file-consumer/pull/11) | Action ref changed, lockfile not updated | Fork matrix | ✅ `startup_failure` "Invalid lockfile" | [❌ *Ref changed* `v2.0.0` vs locked `v3.0.0` + unused entry](https://github.com/Exypte/lock-file-consumer/actions/runs/39921376834) |
-| 09 | [#12](https://github.com/Exypte/lock-file-consumer/pull/12) | Action ref changed with matching pin | Fork matrix | ✅ runs locked, prints V2 | [🆕 ❌ *Incomplete lockfile*: the lock (written by v0.2.0) doesn't record the `lock-file-action@v2.0.0` → `actions/checkout@v7.0.1` edge](https://github.com/Exypte/lock-file-consumer/actions/runs/39921381406) |
-| 10 | [#13](https://github.com/Exypte/lock-file-consumer/pull/13) | Exact tag `v3.0.0` locked to the v2 commit | new | ⚠️ **runs the v2 code as `@v3.0.0`**; only `--verify` detects it | [🆕 ❌ *Locked commit isn't the tag's commit*: tag `v3.0.0` → `6133a07`, lock `ed8c589` (+ the lab 01 missing edge)](https://github.com/Exypte/lock-file-consumer/actions/runs/39921384389) |
+| 09 | [#12](https://github.com/Exypte/lock-file-consumer/pull/12) | Action ref changed with matching pin | Fork matrix | ✅ runs locked, prints V2 | [✅ valid (relocked with v0.3.0)](https://github.com/Exypte/lock-file-consumer/actions/runs/39922501704) |
+| 10 | [#13](https://github.com/Exypte/lock-file-consumer/pull/13) | Exact tag `v3.0.0` locked to the v2 commit | new | ⚠️ **runs the v2 code as `@v3.0.0`**; only `--verify` detects it | [🆕 ❌ *Locked commit isn't the tag's commit*: tag `v3.0.0` → `6133a07`, lock `ed8c589` (+ *Incomplete lockfile*: the v0.2.0 lock doesn't record the `lock-file-action` → `actions/checkout` edge)](https://github.com/Exypte/lock-file-consumer/actions/runs/39921384389) |
 | 11 | [#14](https://github.com/Exypte/lock-file-consumer/pull/14) | `@main` locked to an older commit in main's history | Lock-only change | ⚠️ silent rollback, prints V1 (CLI doesn't detect it either) | [✅ valid (rollback not detected)](https://github.com/Exypte/lock-file-consumer/actions/runs/39921387514) |
 | 12 | [#15](https://github.com/Exypte/lock-file-consumer/pull/15) | `@main` = unreleased commit | new | ✅ runs `A wrong hello world` | [✅ valid](https://github.com/Exypte/lock-file-consumer/actions/runs/39921391828) |
 | 13 | [#16](https://github.com/Exypte/lock-file-consumer/pull/16) | Commit not in the claimed tag's history | new | ✅ fails in *Set up job*: "does not match ref `v1.0.0`" | [❌ *Pinned commit not in upstream history*: tag `v1.0.0`](https://github.com/Exypte/lock-file-consumer/actions/runs/39921394734) |
@@ -122,13 +123,13 @@ These results come from the `verify-lockfile.yml` runs of 2026-10-23 with gh-act
 | | Labs | What happens |
 |---|---|---|
 | **`--verify` is stricter** | 10, 20, 23 | GitHub runs the workflow. `--verify` fails on an exact tag locked to a commit the tag no longer points at (10, 20, now named *Locked commit isn't the tag's commit*), and on the stale entry left by `--no-migrate-local-actions` (23; the `./` action itself is only a warning now). |
-| **`--verify` rejects a v0.2.0 lockfile** | 01, 09 | GitHub runs the workflow. v0.3.0 reports *Incomplete lockfile*: the v0.2.0 lock didn't record that `lock-file-action@v2.0.0` uses `actions/checkout@v7.0.1` (lab 10, locked to the same commit, has it too). `gh actions-lock --relock` fixes it, as the v0.3.0 release notes say. |
+| **`--verify` rejects a v0.2.0 lockfile** | (01, 09 before relock), 10 | GitHub runs the workflow. v0.3.0 reports *Incomplete lockfile*: the v0.2.0 lock didn't record that `lock-file-action@v2.0.0` uses `actions/checkout@v7.0.1`. `gh actions-lock --relock` fixed labs 01 and 09 ([01](https://github.com/Exypte/lock-file-consumer/actions/runs/39921347696), [09](https://github.com/Exypte/lock-file-consumer/actions/runs/39921381406) before it), so they pass again. |
 | **GitHub is stricter** | 28 | `--verify` passes, but GitHub stops a reusable workflow whose tag ships no lockfile. |
 | **Both catch it** | 04, 05, 06, 08, 13, 15, 17, 19, 24, 25 | Missing coverage, ref changed without relocking, a commit outside its ref, a replaced repository, a missing transitive entry (17, 🆕 in v0.3.0), a deleted upstream branch, an imposter SHA in `uses:` (24) or in a hand-written lock (25, 🆕 in v0.3.0). |
 | **Neither catches it** | 11, 16 | A floating branch locked to an older commit (11) and a tampered `owner_id` (16) pass both. |
 | **Different failure** | 14 | GitHub reports *Invalid lockfile*. `--verify` still exits **2**, because the lockfile parser rejects it as unreadable ("action body ref … does not match pin key ref"). v0.3.0's fix for SHA refs covers only a SHA key whose `ref` is that same SHA, not a SHA `ref` under a tag key. |
 
-Changes since v0.2.0 (runs of 2026-10-22): 17 and 25 went from ✅ to ❌, which closes two of the three gaps where GitHub was stricter. 01 and 09 went from ✅ to ❌ because of the lockfile format. 10, 20, 23 and 26 report different findings.
+Changes since v0.2.0 (runs of 2026-10-22): 17 and 25 went from ✅ to ❌, which closes two of the three gaps where GitHub was stricter. 01 and 09 went from ✅ to ❌ because of the lockfile format, and back to ✅ after `--relock`. 10, 20, 23 and 26 report different findings.
 
 Takeaways:
 - Running `--verify` in CI adds the exact-tag check (labs 10, 20), which is GitHub's main blind spot.
