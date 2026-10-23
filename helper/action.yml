@@ -1,0 +1,7 @@
+name: Consumer helper
+description: Conflicting helper in the caller workspace
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo "Helper from consumer workspace"
