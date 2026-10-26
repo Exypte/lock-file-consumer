@@ -4,6 +4,8 @@
 version: 'v0.0.3'
 workflows:
     '.github/workflows/ci.yml':
+        - 'exypte/lock-file-action@main'
+    '.github/workflows/verify-lockfile.yml':
         - 'actions/checkout@v7.0.1'
 dependencies:
     'actions/checkout@v7.0.1':
@@ -11,3 +13,8 @@ dependencies:
         commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
         owner_id: 44036562
         repo_id: 197814629
+    'exypte/lock-file-action@main':
+        ref: 'main'
+        commit: 'sha1-c34c06e00e9e681d0088f329091c9634c719e15b'
+        owner_id: 38421281
+        repo_id: 1428395650
