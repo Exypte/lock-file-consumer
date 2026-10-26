@@ -14,6 +14,4 @@ jobs:
   action:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
+      - uses: Exypte/lock-file-helper@v0.1.0
