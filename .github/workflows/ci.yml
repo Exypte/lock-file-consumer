@@ -11,9 +11,15 @@ permissions:
   contents: read
 
 jobs:
-  action:
+  docker-step:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: docker://alpine:3.20
         with:
-          persist-credentials: false
+          args: echo "docker:// step"
+
+  job-container:
+    runs-on: ubuntu-latest
+    container: alpine:3.20
+    steps:
+      - run: echo "inside job container"; cat /etc/os-release | head -2
