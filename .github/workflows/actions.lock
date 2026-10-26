@@ -5,9 +5,19 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
+        - 'exypte/lock-file-action@v3.0.0'
+    '.github/workflows/verify-lockfile.yml':
+        - 'actions/checkout@v7.0.1'
 dependencies:
     'actions/checkout@v7.0.1':
         ref: 'v7.0.1'
         commit: 'sha1-3d3c42e5aac5ba805825da76410c181273ba90b1'
         owner_id: 44036562
         repo_id: 197814629
+    'exypte/lock-file-action@v3.0.0':
+        ref: 'v3.0.0'
+        commit: 'sha1-6133a07d2663d9bfa11411a3fb969b4a711d6363'
+        owner_id: 38421281
+        repo_id: 1428395650
+        uses:
+            - 'super-linter/super-linter@v6.5.0'
