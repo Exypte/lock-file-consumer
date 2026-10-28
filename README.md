@@ -178,6 +178,14 @@ Results after the merge:
 - Dependabot alert #1 opened for `gopkg.in/yaml.v2`, and security updates opened [#37](https://github.com/Exypte/lock-file-consumer/pull/37) (2.2.7 → 2.2.8).
 - CodeQL default setup ran and passed (`go` and `actions` analyses, 0 alerts), even though `github/codeql-action` is **not** in the allowed-actions list and `sha_pinning_required` is on. The allow-list, SHA pinning and the require-lockfile policy don't apply to the dynamic default-setup workflow.
 
+Results on [#39](https://github.com/Exypte/lock-file-consumer/pull/39) (`vulnerable-action`, from a clean `main`):
+
+| Check | Result |
+|---|---|
+| Dependency review | ❌ `.github/workflows/ci.yml » actions/download-artifact@4.1.2`, GHSA-cxww-7g56-2vh6 (high). This time `ci.yml` is in the graph diff. |
+| CodeQL (`actions`) | ❌ "1 new alert including 1 high severity security vulnerability" at `ci.yml:23`: "The workflow is using a known vulnerable version (v4.1.2) of the actions/download-artifact action. Update it to 4.1.3". CodeQL finds it without the dependency graph. |
+| Lockfile, CI | ✅ |
+
 ## Not covered
 
 - PRs opened from forks
