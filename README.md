@@ -136,6 +136,22 @@ Takeaways:
 - `--verify` doesn't fully replace GitHub's enforcement: lab 28 passes `--verify` but is rejected at runtime.
 - After upgrading to v0.3.0, run `gh actions-lock --relock` once. Lockfiles written by v0.2.0 can fail `--verify` even though GitHub accepts them (labs 01, 09).
 
+## Admin settings rehearsal for getplumber/plumber#570 (2026-10-28)
+
+`main` mirrors the PR: `verify-lockfile.yml` (workflow and job `Lockfile`, no paths filter, gh-actions-lock v0.4.0), `CODEOWNERS` with an explicit `actions.lock` line, and a grouped github-actions `dependabot.yml`. Each follow-up from the PR was applied here, directly on `main`.
+
+| # | Follow-up | What was set here | Result |
+|---|---|---|---|
+| 1 | `Lockfile` required check | Ruleset [26028296](https://github.com/Exypte/lock-file-consumer/rules/26028296) on `~DEFAULT_BRANCH`: `{"context":"Lockfile","integration_id":15368}`, strict | ✅ The check reports as `Lockfile` from app 15368 (`github-actions`), the same id plumber's other checks use. Admin bypass is on so pushes to `main` still work. GitHub lists each skipped rule on the push (`Required status check "Lockfile" is expected`). |
+| 2 | Code owner review | Same ruleset, `pull_request` rule with `require_code_owner_review: true` | ✅ Dependabot PR [#36](https://github.com/Exypte/lock-file-consumer/pull/36) is `REVIEW_REQUIRED` until a code owner approves. With `* @…` in CODEOWNERS this applies to every file, not only `actions.lock`. |
+| 3a | Allowed actions, tag entry | `selected`, only `actions/checkout@v7.0.1` | ❌ [`startup_failure`](https://github.com/Exypte/lock-file-consumer/actions/runs/40666312831): "The action actions/checkout@3d3c42e… is not allowed … match the pattern: actions/checkout@v7.0.1". GitHub checks the allow-list against the locked SHA, so tag entries never match. |
+| 3b | Allowed actions, wildcard | `selected`, `actions/checkout@*` | ✅ [runs](https://github.com/Exypte/lock-file-consumer/actions/runs/40666382127) |
+| 3c | Allowed actions, full SHA | `selected`, `actions/checkout@3d3c42e…` | ✅ [runs](https://github.com/Exypte/lock-file-consumer/actions/runs/40666418098) |
+| 3d | Require SHA pinning | `all` + `sha_pinning_required: true`, tag refs covered by the lockfile | ✅ [runs](https://github.com/Exypte/lock-file-consumer/actions/runs/40666456493). A locked tag counts as pinned, so the setting can stay on. Restored to off afterwards. |
+| 4 | Require lockfile policy | Policy [8194](https://github.com/Exypte/lock-file-consumer/settings/actions/rules/8194), Active, `workflow_path` `.github/workflows/**`, rule `require_lockfile` | ✅ `CI`, `Lockfile` and `Dependabot Updates` all run under it. |
+| 5 | Unlocked step is blocked | Scratch branch adds `actions/setup-go@v6` to `ci.yml` without relocking, then `gh workflow run` | ✅ The dispatch itself is refused, so no run is created: `HTTP 422 … Invalid dependency lockfile … references actions not present in the lockfile: actions/setup-go@v6`. `--verify` reports *Not pinned*. Push and PR cases: labs 04–08. |
+| 6 | Dependabot updates `actions.lock` | `ci.yml` pinned back to `checkout@v6.1.0` and relocked | ✅ Dependabot runs `gh-actions-lock` during the update. PR [#36](https://github.com/Exypte/lock-file-consumer/pull/36) bumps `ci.yml` **and** `actions.lock`, and `Lockfile` passes. Changing `dependabot.yml` starts an update run right away. |
+
 ## Not covered
 
 - PRs opened from forks
