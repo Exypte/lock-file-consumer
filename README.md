@@ -152,6 +152,25 @@ Takeaways:
 | 5 | Unlocked step is blocked | Scratch branch adds `actions/setup-go@v6` to `ci.yml` without relocking, then `gh workflow run` | ✅ The dispatch itself is refused, so no run is created: `HTTP 422 … Invalid dependency lockfile … references actions not present in the lockfile: actions/setup-go@v6`. `--verify` reports *Not pinned*. Push and PR cases: labs 04–08. |
 | 6 | Dependabot updates `actions.lock` | `ci.yml` pinned back to `checkout@v6.1.0` and relocked | ✅ Dependabot runs `gh-actions-lock` during the update. PR [#36](https://github.com/Exypte/lock-file-consumer/pull/36) bumps `ci.yml` **and** `actions.lock`, and `Lockfile` passes. Changing `dependabot.yml` starts an update run right away. |
 
+## Dependency graph, dependency review and Dependabot alerts (PR #36)
+
+The Go CLI from [Exypte/gh-actions-lock](https://github.com/Exypte/gh-actions-lock) (`main.go`, `cmd/`, `internal/`, `go.mod`, `go.sum`) was copied in so the dependency graph has Go modules to read next to the workflows. Two dependencies are vulnerable on purpose, one per ecosystem, and both are used directly:
+
+| Ecosystem | Dependency | Advisory | Fixed in |
+|---|---|---|---|
+| Go | `gopkg.in/yaml.v2 v2.2.7` (blank import in `main.go`, so `go mod tidy` keeps it) | [GHSA-wxc4-f4m6-wwqv](https://github.com/advisories/GHSA-wxc4-f4m6-wwqv) (medium) | v2.2.8 |
+| Actions | `actions/download-artifact@v4.1.2` (step in `ci.yml`, no artifacts to download) | [GHSA-cxww-7g56-2vh6](https://github.com/advisories/GHSA-cxww-7g56-2vh6) (high) | v4.1.3 |
+
+What was set up:
+
+- `dependency-review.yml` runs `actions/dependency-review-action@v5.0.0` on pull requests with `fail-on-severity: low`.
+- `dependabot.yml` gained a grouped `gomod` entry.
+- Dependabot alerts and Dependabot security updates were turned on (both were off).
+- The allowed-actions list gained `actions/download-artifact@*` and `actions/dependency-review-action@*`. `sha_pinning_required` is still on.
+- `actions.lock` was relocked with `gh actions-lock` v0.4.0.
+
+The dependency graph and Dependabot alerts only read the default branch. Until this branch is merged, dependency review on the PR is the only place the two advisories show up.
+
 ## Not covered
 
 - PRs opened from forks
