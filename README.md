@@ -154,12 +154,13 @@ Takeaways:
 
 ## Dependency graph, dependency review and Dependabot alerts (PR #36)
 
-The Go CLI from [Exypte/gh-actions-lock](https://github.com/Exypte/gh-actions-lock) (`main.go`, `cmd/`, `internal/`, `go.mod`, `go.sum`) was copied in so the dependency graph has Go modules to read next to the workflows. Two dependencies are vulnerable on purpose, one per ecosystem, and both are used directly:
+The Go CLI from [Exypte/gh-actions-lock](https://github.com/Exypte/gh-actions-lock) (`main.go`, `cmd/`, `internal/`, `go.mod`, `go.sum`) was copied in so the dependency graph has Go modules to read next to the workflows. One Go dependency is vulnerable on purpose and used directly:
 
 | Ecosystem | Dependency | Advisory | Fixed in |
 |---|---|---|---|
 | Go | `gopkg.in/yaml.v2 v2.2.7` (blank import in `main.go`, so `go mod tidy` keeps it) | [GHSA-wxc4-f4m6-wwqv](https://github.com/advisories/GHSA-wxc4-f4m6-wwqv) (medium) | v2.2.8 |
-| Actions | `actions/download-artifact@v4.1.2` (step in `ci.yml`, no artifacts to download) | [GHSA-cxww-7g56-2vh6](https://github.com/advisories/GHSA-cxww-7g56-2vh6) (high) | v4.1.3 |
+
+A vulnerable action (`actions/download-artifact@v4.1.2`, [GHSA-cxww-7g56-2vh6](https://github.com/advisories/GHSA-cxww-7g56-2vh6)) was tried in `ci.yml` here too, but dependency review never saw that file change, so it was removed. It will be tested on its own branch from `main`.
 
 What was set up:
 
@@ -169,7 +170,7 @@ What was set up:
 - The allowed-actions list gained `actions/download-artifact@*` and `actions/dependency-review-action@*`. `sha_pinning_required` is still on.
 - `actions.lock` was relocked with `gh actions-lock` v0.4.0.
 
-The dependency graph and Dependabot alerts only read the default branch. Until this branch is merged, dependency review on the PR is the only place the two advisories show up.
+The dependency graph and Dependabot alerts only read the default branch. Until this branch is merged, dependency review on the PR is the only place the advisory shows up.
 
 ## Not covered
 

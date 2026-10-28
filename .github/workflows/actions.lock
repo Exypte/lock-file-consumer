@@ -5,7 +5,6 @@ version: 'v0.0.3'
 workflows:
     '.github/workflows/ci.yml':
         - 'actions/checkout@v7.0.1'
-        - 'actions/download-artifact@v4.1.2'
     '.github/workflows/dependency-review.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/dependency-review-action@v5.0.0'
@@ -22,8 +21,3 @@ dependencies:
         commit: 'sha1-a1d282b36b6f3519aa1f3fc636f609c47dddb294'
         owner_id: 44036562
         repo_id: 476372928
-    'actions/download-artifact@v4.1.2':
-        ref: 'v4.1.2'
-        commit: 'sha1-eaceaf801fd36c7dee90939fad912460b18a1ffe'
-        owner_id: 44036562
-        repo_id: 192626254
