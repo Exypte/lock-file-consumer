@@ -16,7 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
         with:
-          persist-credentials: false      # Deliberately vulnerable (GHSA-cxww-7g56-2vh6, fixed in v4.1.3) to
+          persist-credentials: false
+      # Deliberately vulnerable (GHSA-cxww-7g56-2vh6, fixed in v4.1.3) to
       # exercise Dependabot alerts and dependency review. No artifacts exist,
       # so it downloads nothing.
       - uses: actions/download-artifact@v4.1.2
