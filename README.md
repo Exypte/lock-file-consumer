@@ -160,7 +160,7 @@ The Go CLI from [Exypte/gh-actions-lock](https://github.com/Exypte/gh-actions-lo
 |---|---|---|---|
 | Go | `gopkg.in/yaml.v2 v2.2.7` (blank import in `main.go`, so `go mod tidy` keeps it) | [GHSA-wxc4-f4m6-wwqv](https://github.com/advisories/GHSA-wxc4-f4m6-wwqv) (medium) | v2.2.8 |
 
-A vulnerable action (`actions/download-artifact@v4.1.2`, [GHSA-cxww-7g56-2vh6](https://github.com/advisories/GHSA-cxww-7g56-2vh6)) was tried in `ci.yml` here too, but dependency review never saw that file change, so it was removed. It will be tested on its own branch from `main`.
+A vulnerable action (`actions/download-artifact@v4.1.2`, [GHSA-cxww-7g56-2vh6](https://github.com/advisories/GHSA-cxww-7g56-2vh6), high, fixed in v4.1.3) was tried in `ci.yml` here too, but dependency review never saw that file change, so it was removed. It is now tested on its own branch from `main` (`vulnerable-action`).
 
 What was set up:
 
@@ -169,8 +169,14 @@ What was set up:
 - Dependabot alerts and Dependabot security updates were turned on (both were off).
 - The allowed-actions list gained `actions/download-artifact@*` and `actions/dependency-review-action@*`. `sha_pinning_required` is still on.
 - `actions.lock` was relocked with `gh actions-lock` v0.4.0.
+- Code scanning default setup (CodeQL, `go` and `actions`, weekly) was turned on after the merge.
 
-The dependency graph and Dependabot alerts only read the default branch. Until this branch is merged, dependency review on the PR is the only place the advisory shows up.
+The dependency graph and Dependabot alerts only read the default branch.
+
+Results after the merge:
+
+- Dependabot alert #1 opened for `gopkg.in/yaml.v2`, and security updates opened [#37](https://github.com/Exypte/lock-file-consumer/pull/37) (2.2.7 → 2.2.8).
+- CodeQL default setup ran and passed (`go` and `actions` analyses, 0 alerts), even though `github/codeql-action` is **not** in the allowed-actions list and `sha_pinning_required` is on. The allow-list, SHA pinning and the require-lockfile policy don't apply to the dynamic default-setup workflow.
 
 ## Not covered
 
